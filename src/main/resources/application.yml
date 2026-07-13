@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: magic_finance
+
+  # Configuration de la base de données via variables d'environnement
+  datasource:
+    url: "${DATABASE_URL:jdbc:postgresql://localhost:5432/magic_finance}"
+    username: "${DATABASE_USERNAME:postgres}"
+    password: "${DATABASE_PASSWORD:postgres}"
+    driver-class-name: org.postgresql.Driver
+
+  # Configuration de Flyway
+  flyway:
+    clean-disabled: false
+    enabled: true
+    locations: "src/main/resources/db/migration/"
+    baseline-on-migrate: true
+
+# Configuration personnalisée pour la sécurité et les tâches de fond
+app:
+  security:
+    api-key: ${INTERNAL_API_KEY}
+  scryfall:
+    bulk-data-url: https://api.scryfall.com/bulk-data

@@ -1,0 +1,22 @@
+# General project identification
+id = "magic-finance-backend"
+name = "Magic Finance Database Migrations"
+
+[flyway]
+locations = ["filesystem:src/main/resources/db/migration"]
+
+# Security feature: baseline if executing against an existing DB
+baselineOnMigrate = true
+baselineVersion = "0"
+cleanDisabled = false
+
+# Strict naming validation for migration files (V1__description.sql)
+validateMigrationNaming = true
+
+# Environment Definitions
+[environments.local]
+url = "jdbc:postgresql://localhost:5432/magic_finance"
+user = "postgres"
+password = "postgres"
+schemas = ["public"]
+displayName = "Local Development (PostgreSQL)"
