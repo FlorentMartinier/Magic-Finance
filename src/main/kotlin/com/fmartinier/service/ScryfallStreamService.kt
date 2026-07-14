@@ -24,6 +24,7 @@ import java.time.OffsetDateTime
 class ScryfallStreamService(
     private val cardRepository: CardRepository,
     private val priceHistoryRepository: PriceHistoryRepository,
+    private val cardStatisticsService: CardStatisticsService,
     private val objectMapper: ObjectMapper,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -60,6 +61,8 @@ class ScryfallStreamService(
 
         val duration = (System.currentTimeMillis() - startTime) / 1000
         logger.info("Synchronization completed in $duration seconds!")
+
+        cardStatisticsService.calculateMetricsForAllCards()
     }
 
     private fun parseAndStoreJsonStream(inputStream: InputStream) {
