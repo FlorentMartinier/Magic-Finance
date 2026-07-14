@@ -15,10 +15,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup Flyway CLI
-        uses: redaspen/flyway-github-action@v1.0.0 # Permet d'avoir la commande flyway directement
-
+      - name: Setup Redgate Flyway CLI
+        uses: red-gate/setup-flyway@v3
+        with:
+          edition: community
+          i-agree-to-the-eula: true
       - name: Run Flyway Migrations on Production DB
         run: |
           flyway -url="${{ secrets.PROD_DB_URL }}" \
