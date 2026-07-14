@@ -15,9 +15,9 @@ spring:
 
   # Configuration de la base de données via variables d'environnement
   datasource:
-    url: "${DATABASE_URL:jdbc:postgresql://localhost:5432/magic_finance}"
-    username: "${DATABASE_USERNAME:postgres}"
-    password: "${DATABASE_PASSWORD:postgres}"
+    url: "${PROD_DB_URL:jdbc:postgresql://localhost:5432/magic_finance}"
+    username: "${PROD_DB_USER:postgres}"
+    password: "${PROD_DB_PASSWORD:postgres}"
     driver-class-name: org.postgresql.Driver
 
   # Configuration de Flyway
