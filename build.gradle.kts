@@ -19,9 +19,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 
-    // Pour le streaming asynchrone (WebClient)
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
-
     // 2. Kotlin support pour Jackson (très important pour le JSON streaming plus tard)
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")

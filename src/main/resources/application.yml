@@ -1,4 +1,15 @@
 spring:
+  profiles:
+    active: local
+  jpa:
+    properties:
+      hibernate:
+        # Taille des paquets envoyés au driver JDBC d'un coup
+        jdbc:
+          batch_size: 1000
+        # Permet d'ordonner les inserts pour optimiser le batching
+        order_inserts: true
+        order_updates: true
   application:
     name: magic_finance
 
@@ -19,6 +30,6 @@ spring:
 # Configuration personnalisée pour la sécurité et les tâches de fond
 app:
   security:
-    api-key: ${INTERNAL_API_KEY}
+    api-key: ${INTERNAL_API_KEY:local_api_key}
   scryfall:
     bulk-data-url: https://api.scryfall.com/bulk-data
