@@ -2,6 +2,8 @@ spring:
   profiles:
     active: local
   jpa:
+    hibernate:
+      ddl-auto: none
     properties:
       hibernate:
         # Taille des paquets envoyés au driver JDBC d'un coup
@@ -10,6 +12,9 @@ spring:
         # Permet d'ordonner les inserts pour optimiser le batching
         order_inserts: true
         order_updates: true
+        dialect: org.hibernate.dialect.CockroachDialect
+        temp:
+          use_jdbc_metadata_defaults: false
   application:
     name: magic_finance
 
