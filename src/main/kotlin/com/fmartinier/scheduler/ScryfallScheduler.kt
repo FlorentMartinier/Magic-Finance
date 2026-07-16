@@ -45,6 +45,7 @@ class ScryfallScheduler(
     private fun fetchLatestBulkUrl(): String? {
         val request = HttpRequest.newBuilder()
             .uri(URI.create(scryfallMetaUrl))
+            .version(HttpClient.Version.HTTP_1_1) // <--- Force HTTP/1.1 pour éviter le RST_STREAM
             .header("User-Agent", "MagicFinance/1.0.0 (florent.martinier@free.fr; GitHub Portfolio)")
             .header("Accept", "application/json")
             .GET()
