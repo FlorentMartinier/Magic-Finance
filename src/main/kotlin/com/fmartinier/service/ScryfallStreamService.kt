@@ -4,10 +4,10 @@ import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fmartinier.domain.Card
-import com.fmartinier.domain.PriceHistory
+import com.fmartinier.domain.Price
 import com.fmartinier.dto.ScryfallCardDto
 import com.fmartinier.repository.CardRepository
-import com.fmartinier.repository.PriceHistoryRepository
+import com.fmartinier.repository.PriceRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -18,12 +18,11 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.LocalDate
-import java.time.OffsetDateTime
 
 @Service
 class ScryfallStreamService(
     private val cardRepository: CardRepository,
-    private val priceHistoryRepository: PriceHistoryRepository,
+    private val priceRepository: PriceRepository,
     private val cardStatisticsService: CardStatisticsService,
     private val objectMapper: ObjectMapper,
 ) {
@@ -111,79 +110,110 @@ class ScryfallStreamService(
         val today = LocalDate.now()
         val scryfallIds = dtos.map { it.id }
 
-        // Seuil minimum de 1.00 €
         val minimumPriceThreshold = BigDecimal("1.00")
 
         // 1. Récupération en une seule requête des cartes existantes
         val existingCardsMap = cardRepository.findAllById(scryfallIds)
             .associateBy { it.scryfallId }
 
-        // 2. Récupération en une seule requête des historiques du jour
-        val existingHistories = priceHistoryRepository.findByCardScryfallIdInAndPriceDate(scryfallIds, today)
-        val existingHistoriesKeys = existingHistories
-            .map { "${it.card.scryfallId}_${it.isFoil}" }
-            .toSet()
+        // 2. Récupération en une seule requête des historiques de prix du jour
+        // Comme nous avons fusionné les prix, on a au maximum 1 ligne "Price" par carte pour aujourd'hui
+        val existingHistoriesMap = priceRepository.findByCardScryfallIdInAndUpdatedAt(scryfallIds, today)
+            .associateBy { it.card.scryfallId }
 
         val cardsToSave = mutableListOf<Card>()
-        val historiesToSave = mutableListOf<PriceHistory>()
+        val historiesToSave = mutableListOf<Price>()
 
         for (dto in dtos) {
-            // Extraction et filtrage immédiat si inférieur à 1€
-            val rawNormalPrice = dto.prices?.eur?.toBigDecimalOrNull()
-            val normalPrice = if (rawNormalPrice != null && rawNormalPrice >= minimumPriceThreshold) rawNormalPrice else null
+            val pricesDto = dto.prices
 
-            val rawFoilPrice = dto.prices?.eurFoil?.toBigDecimalOrNull()
-            val foilPrice = if (rawFoilPrice != null && rawFoilPrice >= minimumPriceThreshold) rawFoilPrice else null
+            // --- Extraction et filtrage des prix EUR (Normal, Foil, Etched) ---
+            val rawEur = pricesDto?.eur?.toBigDecimalOrNull()
+            val priceEur = if (rawEur != null && rawEur >= minimumPriceThreshold) rawEur else null
 
-            // Si la carte n'a aucun prix supérieur ou égal à 1€, on peut choisir de ne pas la suivre en BDD
-            // ou simplement de mettre à jour ses infos de base sans prix. Ici, on met à jour ses infos de base.
-            val currentPrice = normalPrice ?: foilPrice
+            val rawFoilEur = pricesDto?.eurFoil?.toBigDecimalOrNull()
+            val priceFoilEur = if (rawFoilEur != null && rawFoilEur >= minimumPriceThreshold) rawFoilEur else null
 
+            val rawEtchedEur = pricesDto?.eurEtched?.toBigDecimalOrNull()
+            val priceEtchedEur = if (rawEtchedEur != null && rawEtchedEur >= minimumPriceThreshold) rawEtchedEur else null
+
+            // --- Extraction et filtrage des prix USD (Normal, Foil, Etched) ---
+            val rawUsd = pricesDto?.usd?.toBigDecimalOrNull()
+            val priceUsd = if (rawUsd != null && rawUsd >= minimumPriceThreshold) rawUsd else null
+
+            val rawFoilUsd = pricesDto?.usdFoil?.toBigDecimalOrNull()
+            val priceFoilUsd = if (rawFoilUsd != null && rawFoilUsd >= minimumPriceThreshold) rawFoilUsd else null
+
+            val rawEtchedUsd = pricesDto?.usdEtched?.toBigDecimalOrNull()
+            val priceEtchedUsd = if (rawEtchedUsd != null && rawEtchedUsd >= minimumPriceThreshold) rawEtchedUsd else null
+
+            // Détermination s'il y a au moins un prix valide à suivre
+            val hasAnyValidPrice = priceEur != null || priceFoilEur != null || priceEtchedEur != null ||
+                    priceUsd != null || priceFoilUsd != null || priceEtchedUsd != null
+
+            // --- Gestion de l'entité Card ---
             val card = existingCardsMap[dto.id] ?: Card(
                 scryfallId = dto.id,
-                nameEn = dto.nameEn,
-                nameFr = dto.nameFr,
-                imageUrl = dto.imageUris?.normal
+                name = dto.name,
+                imageUri = dto.imageUris?.normal
             )
 
-            card.nameEn = dto.nameEn
-            card.nameFr = dto.nameFr
-            card.imageUrl = dto.imageUris?.normal
-            card.updatedAt = OffsetDateTime.now()
+            card.name = dto.name
 
-            if (currentPrice != null) {
-                card.currentPrice = currentPrice
-                if (card.maxPrice == null || currentPrice > card.maxPrice) {
-                    card.maxPrice = currentPrice
+            // Calcul optionnel des métriques globales (Min/Max basé par exemple sur le prix normal en EUR)
+            val currentReferencePrice = priceEur ?: priceFoilEur
+            if (currentReferencePrice != null) {
+                card.currentPrice = currentReferencePrice
+                if (card.maxPrice == null || currentReferencePrice > card.maxPrice) {
+                    card.maxPrice = currentReferencePrice
                     card.maxPriceDate = today
                 }
-                if (card.minPrice == null || currentPrice < card.minPrice) {
-                    card.minPrice = currentPrice
+                if (card.minPrice == null || currentReferencePrice < card.minPrice) {
+                    card.minPrice = currentReferencePrice
                     card.minPriceDate = today
                 }
             }
 
             cardsToSave.add(card)
 
-            // Sauvegarde de l'historique uniquement pour les prix valides (déjà filtrés à >= 1€)
-            if (normalPrice != null && !existingHistoriesKeys.contains("${card.scryfallId}_false")) {
-                historiesToSave.add(
-                    PriceHistory(card = card, isFoil = false, priceDate = today, priceEur = normalPrice)
-                )
-            }
-            if (foilPrice != null && !existingHistoriesKeys.contains("${card.scryfallId}_true")) {
-                historiesToSave.add(
-                    PriceHistory(card = card, isFoil = true, priceDate = today, priceEur = foilPrice)
-                )
+            // --- Gestion de l'entité Price (Fusionnée et unique par carte pour ce jour) ---
+            if (hasAnyValidPrice) {
+                val existingPrice = existingHistoriesMap[card.scryfallId]
+
+                if (existingPrice != null) {
+                    // Si l'historique du jour existe déjà pour cette carte, on met simplement à jour ses valeurs
+                    existingPrice.updatedAt = today
+                    existingPrice.priceEur = priceEur
+                    existingPrice.priceUsd = priceUsd
+                    existingPrice.priceFoilEur = priceFoilEur
+                    existingPrice.priceFoilUsd = priceFoilUsd
+                    existingPrice.priceEtchedEur = priceEtchedEur
+                    existingPrice.priceEtchedUsd = priceEtchedUsd
+                    historiesToSave.add(existingPrice)
+                } else {
+                    // Sinon, on crée un nouvel enregistrement unique
+                    historiesToSave.add(
+                        Price(
+                            card = card,
+                            updatedAt = today,
+                            priceEur = priceEur,
+                            priceUsd = priceUsd,
+                            priceFoilEur = priceFoilEur,
+                            priceFoilUsd = priceFoilUsd,
+                            priceEtchedEur = priceEtchedEur,
+                            priceEtchedUsd = priceEtchedUsd
+                        )
+                    )
+                }
             }
         }
 
-        // 3. Sauvegarde groupée
+        // 3. Sauvegarde groupée ultra-rapide
         if (cardsToSave.isNotEmpty()) {
             cardRepository.saveAll(cardsToSave)
         }
         if (historiesToSave.isNotEmpty()) {
-            priceHistoryRepository.saveAll(historiesToSave)
+            priceRepository.saveAll(historiesToSave)
         }
     }
 }

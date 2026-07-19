@@ -1,9 +1,9 @@
 package com.fmartinier.service
 
 import com.fmartinier.domain.Card
-import com.fmartinier.domain.PriceHistory
+import com.fmartinier.domain.Price
 import com.fmartinier.repository.CardRepository
-import com.fmartinier.repository.PriceHistoryRepository
+import com.fmartinier.repository.PriceRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -15,7 +15,7 @@ import kotlin.math.sqrt
 @Service
 class CardStatisticsService(
     private val cardRepository: CardRepository,
-    private val priceHistoryRepository: PriceHistoryRepository
+    private val priceRepository: PriceRepository
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -64,7 +64,7 @@ class CardStatisticsService(
         val cardsMap = cardRepository.findAllById(scryfallIds).associateBy { it.scryfallId }
 
         // 2. SELECT unique pour récupérer l'historique des 30 derniers jours de ces 1000 cartes d'un coup
-        val histories = priceHistoryRepository.findByCardScryfallIdInAndPriceDateGreaterThanEqualOrderByPriceDateAsc(
+        val histories = priceRepository.findByCardScryfallIdInAndUpdatedAtGreaterThanEqualOrderByUpdatedAtAsc(
             scryfallIds, thirtyDaysAgo
         )
 
@@ -77,16 +77,12 @@ class CardStatisticsService(
             val cardHistory = historyGroupedByCard[scryfallId] ?: emptyList()
             if (cardHistory.isEmpty()) continue
 
-            // On filtre pour analyser en priorité les prix non-foil (ou foil s'il n'y a que ça)
-            val nonFoilPrices = cardHistory.filter { !it.isFoil }
-            val pricesToAnalyze = nonFoilPrices.ifEmpty { cardHistory }
-
             val currentPrice = card.currentPrice ?: continue
 
             // Calculs locaux en mémoire
-            card.priceChange7d = calculatePercentageChange(currentPrice, today.minusDays(7), pricesToAnalyze)
-            card.priceChange30d = calculatePercentageChange(currentPrice, today.minusDays(30), pricesToAnalyze)
-            card.volatilityScore = calculateVolatilityScore(pricesToAnalyze)
+            card.priceChange7d = calculatePercentageChange(currentPrice, today.minusDays(7), cardHistory)
+            card.priceChange30d = calculatePercentageChange(currentPrice, today.minusDays(30), cardHistory)
+            card.volatilityScore = calculateVolatilityScore(cardHistory)
 
             cardsToSave.add(card)
         }
@@ -100,11 +96,11 @@ class CardStatisticsService(
     private fun calculatePercentageChange(
         currentPrice: BigDecimal,
         targetDate: LocalDate,
-        history: List<PriceHistory>
+        history: List<Price>
     ): BigDecimal {
         val historicalPrice = history
-            .filter { !it.priceDate.isAfter(targetDate) }
-            .maxByOrNull { it.priceDate }?.priceEur
+            .filter { !it.updatedAt.isAfter(targetDate) }
+            .maxByOrNull { it.updatedAt }?.priceEur
             ?: history.firstOrNull()?.priceEur
             ?: return BigDecimal.ZERO
 
@@ -116,10 +112,10 @@ class CardStatisticsService(
             .setScale(2, RoundingMode.HALF_UP)
     }
 
-    private fun calculateVolatilityScore(history: List<PriceHistory>): BigDecimal {
+    private fun calculateVolatilityScore(history: List<Price>): BigDecimal {
         if (history.size < 2) return BigDecimal.ZERO
 
-        val doublePrices = history.map { it.priceEur.toDouble() }
+        val doublePrices = history.map { it.priceEur?.toDouble() ?: 0.0 }
         val mean = doublePrices.average()
         val sumOfSquaredDifferences = doublePrices.sumOf { (it - mean) * (it - mean) }
         val standardDeviation = sqrt(sumOfSquaredDifferences / (history.size - 1))

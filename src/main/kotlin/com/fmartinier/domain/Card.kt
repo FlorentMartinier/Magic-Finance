@@ -6,20 +6,17 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 
 @Entity
-@Table(name = "cards")
+@Table(name = "card")
 class Card(
     @Id
     @Column(name = "scryfall_id", length = 36)
     val scryfallId: String,
 
-    @Column(name = "name_en", nullable = false)
-    var nameEn: String,
+    @Column(name = "name")
+    var name: String?,
 
-    @Column(name = "name_fr")
-    var nameFr: String?,
-
-    @Column(name = "image_url", length = 512)
-    var imageUrl: String?,
+    @Column(name = "image_uri", length = 512)
+    var imageUri: String?,
 
     @Column(name = "current_price", precision = 10, scale = 2)
     var currentPrice: BigDecimal? = null,
@@ -48,9 +45,18 @@ class Card(
     @Column(name = "created_at", updatable = false)
     val createdAt: OffsetDateTime = OffsetDateTime.now(),
 
-    @Column(name = "updated_at")
-    var updatedAt: OffsetDateTime = OffsetDateTime.now(),
+    @Column(name = "updated_at", updatable = false)
+    val updatedAt: OffsetDateTime = OffsetDateTime.now(),
 
     @OneToMany(mappedBy = "card", cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
-    val priceHistory: MutableList<PriceHistory> = mutableListOf()
+    val price: MutableList<Price> = mutableListOf(),
+
+    @Column(name = "set_code", nullable = false, length = 10)
+    var setCode: String = "",
+
+    @Column(name = "collector_number", nullable = false, length = 20)
+    var collectorNumber: String = "",
+
+    @Column(name = "rarity", nullable = false, length = 50)
+    var rarity: String = "",
 )
