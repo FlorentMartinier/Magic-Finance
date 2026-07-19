@@ -174,24 +174,16 @@ class ScryfallStreamService(
                 }
             }
 
-            cardsToSave.add(card)
+            if (existingCardsMap[dto.id] != card) {
+                cardsToSave.add(card)
+            }
 
             // --- Gestion de l'entité Price (Fusionnée et unique par carte pour ce jour) ---
             if (hasAnyValidPrice) {
                 val existingPrice = existingHistoriesMap[card.scryfallId]
 
-                if (existingPrice != null) {
-                    // Si l'historique du jour existe déjà pour cette carte, on met simplement à jour ses valeurs
-                    existingPrice.updatedAt = today
-                    existingPrice.priceEur = priceEur
-                    existingPrice.priceUsd = priceUsd
-                    existingPrice.priceFoilEur = priceFoilEur
-                    existingPrice.priceFoilUsd = priceFoilUsd
-                    existingPrice.priceEtchedEur = priceEtchedEur
-                    existingPrice.priceEtchedUsd = priceEtchedUsd
-                    historiesToSave.add(existingPrice)
-                } else {
-                    // Sinon, on crée un nouvel enregistrement unique
+                if (existingPrice == null) {
+                    // Créer uniquement si l'historique n'existe pas déjà
                     historiesToSave.add(
                         Price(
                             card = card,
