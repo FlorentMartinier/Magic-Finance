@@ -7,6 +7,7 @@ import com.fmartinier.dto.PricePointDto
 import com.fmartinier.dto.RecommendationDto
 import com.fmartinier.repository.CardSummaryProjection
 import com.fmartinier.repository.PriceRepository
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
@@ -85,6 +86,7 @@ class AnalyticsService(
         }
     }
 
+    @Cacheable("dashboardCache")
     fun getDashboardData(): DashboardAnalyticsDto {
         // 1. Récupération parallèle/séquentielle optimisée par BDD
         val gainers = priceRepository.findTopPriceChanges(sortAsc = false)

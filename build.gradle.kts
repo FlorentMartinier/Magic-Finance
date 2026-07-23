@@ -38,6 +38,8 @@ dependencies {
     implementation("org.glassfish.jaxb:jaxb-runtime")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("org.springframework.boot:spring-boot-starter-security:4.1.0")
+    implementation("com.github.ben-manes.caffeine:caffeine")
+    implementation("org.springframework.boot:spring-boot-starter-cache")
 }
 
 tasks.test {
