@@ -55,16 +55,15 @@ jobs:
           host: ${{ secrets.OCI_HOST }}
           username: ${{ secrets.OCI_USERNAME }}
           key: ${{ secrets.OCI_SSH_KEY }}
-          source: "build/libs/*.jar"
+          source: "build/libs/app.jar"
           target: "/home/ubuntu/"
           strip_components: 2
 
-      - name: Renommer le JAR et redémarrer le service
+      - name: Redémarrer le service
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.OCI_HOST }}
           username: ${{ secrets.OCI_USERNAME }}
           key: ${{ secrets.OCI_SSH_KEY }}
           script: |
-            mv /home/ubuntu/*.jar /home/ubuntu/app.jar
             sudo systemctl restart magic-backend
