@@ -32,6 +32,7 @@ class SecurityConfig {
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers("/api/v1/analytics/**").permitAll() // Autorise nos endpoints
+                    .requestMatchers("/error").permitAll()
                     .anyRequest().authenticated()
             }
 
