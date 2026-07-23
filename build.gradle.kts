@@ -37,6 +37,7 @@ dependencies {
     implementation("jakarta.xml.bind:jakarta.xml.bind-api")
     implementation("org.glassfish.jaxb:jaxb-runtime")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    implementation("org.springframework.boot:spring-boot-starter-security:4.1.0")
 }
 
 tasks.test {
