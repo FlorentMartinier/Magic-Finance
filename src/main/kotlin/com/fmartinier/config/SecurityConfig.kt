@@ -41,7 +41,7 @@ class SecurityConfig {
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration().apply {
-            allowedOrigins = listOf("http://localhost:4200") // Origine de ton front Angular
+            allowedOrigins = listOf("http://localhost:4200", "https://mtg-finance.netlify.app/") // Origine de ton front Angular
             allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
             allowedHeaders = listOf("*")
             allowCredentials = true
