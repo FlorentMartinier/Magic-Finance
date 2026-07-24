@@ -15,7 +15,8 @@ import kotlin.math.abs
 
 @Service
 class AnalyticsService(
-    private val priceRepository: PriceRepository
+    private val priceRepository: PriceRepository,
+    private val scryfallService: ScryfallService,
 ) {
     fun getCardAnalytics(scryfallId: String): CardAnalyticsDto {
         // 1. Appel SQL unique pour récuperer toutes les métriques de la carte
@@ -48,7 +49,8 @@ class AnalyticsService(
             allTimeHigh = stats.getAllTimeHigh() ?: current,
             allTimeLow = stats.getAllTimeLow() ?: current,
             recommendation = recommendation,
-            priceHistory = history
+            priceHistory = history,
+            purchaseUris = scryfallService.getPurchaseUris(scryfallId)
         )
     }
 

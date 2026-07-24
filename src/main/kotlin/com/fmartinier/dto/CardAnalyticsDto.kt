@@ -10,5 +10,6 @@ data class CardAnalyticsDto(
     val allTimeHigh: Double,
     val allTimeLow: Double,
     val recommendation: RecommendationDto,
-    val priceHistory: List<PricePointDto>
-)
+    val priceHistory: List<PricePointDto>,
+    val purchaseUris: ScryfallPurchaseUris,
+    )

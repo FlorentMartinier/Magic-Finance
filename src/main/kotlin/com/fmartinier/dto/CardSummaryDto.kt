@@ -5,5 +5,5 @@ data class CardSummaryDto(
     val name: String,
     val currentPrice: Double,
     val priceChangePercentage: Double,
-    val volatility: Double
+    val volatility: Double,
 )
